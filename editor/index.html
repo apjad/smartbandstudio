@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Songbank</title>
+<style>
+  :root {
+    --bg: #15120d;
+    --card: #211c15;
+    --border: #3a3226;
+    --text: #efe8da;
+    --muted: #9c9284;
+    --accent: #d9a13a;
+    --accent2: #5a8f4f;
+    --danger: #d16a5a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding-bottom: 100px;
+  }
+  header { padding: 20px 20px 12px; max-width: 760px; margin: 0 auto; }
+  h1 {
+    font-size: 1.5rem;
+    margin: 0 0 4px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 800;
+  }
+  .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 14px; }
+  .toolbar { display: flex; gap: 8px; max-width: 760px; margin: 0 auto 8px; padding: 0 20px; }
+  input[type=text], input[type=search], input[type=number] {
+    font: inherit; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--card); color: var(--text); width: 100%;
+  }
+  .btn {
+    font: inherit; font-weight: 600; padding: 10px 16px; border-radius: 10px; border: none;
+    cursor: pointer; white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent); color: #221a0c; }
+  .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid transparent; }
+  .btn-danger:hover { background: #3a2420; }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+
+  main { max-width: 760px; margin: 0 auto; padding: 0 20px; }
+
+  .song { background: var(--card); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 10px; overflow: hidden; }
+  .song-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; cursor: pointer; }
+  .song-title { font-weight: 700; font-size: 1.05rem; }
+  .song-sub { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
+  .chevron { color: var(--muted); transition: transform 0.15s; font-size: 0.85rem; }
+  .song.open .chevron { transform: rotate(90deg); }
+
+  .song-body { display: none; padding: 0 16px 16px; border-top: 1px solid var(--border); }
+  .song.open .song-body { display: block; }
+  .field-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); margin: 12px 0 6px; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  textarea {
+    font: inherit; width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--bg); color: var(--text); resize: vertical; min-height: 60px;
+  }
+  .part-row { border: 1px solid var(--border); border-radius: 10px; padding: 10px; margin-bottom: 8px; background: var(--bg); }
+  .part-row .row { margin-bottom: 6px; }
+  .part-row .label-input { flex: 2; }
+  .part-row .bars-input { flex: 1; }
+  .song-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+  .add-card { background: var(--card); border: 1.5px dashed var(--border); border-radius: 14px; padding: 16px; margin: 16px 0 24px; }
+  .add-card h2 { font-size: 1rem; margin: 0 0 10px; }
+  .add-card input, .add-card textarea { margin-bottom: 8px; }
+  details.paste-ai { margin-top: 10px; }
+  details.paste-ai summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; }
+
+  .footer-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border);
+    padding: 12px 20px; display: flex; justify-content: center; gap: 10px; align-items: center;
+  }
+  #status { font-size: 0.85rem; color: var(--muted); }
+  #status.ok { color: var(--accent2); }
+  #status.err { color: var(--danger); }
+  .empty { color: var(--muted); text-align: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Songbank</h1>
+  <div class="sub" id="countSub">Henter…</div>
+</header>
+
+<div class="toolbar">
+  <input type="search" id="search" placeholder="Søg efter sang…">
+</div>
+
+<main>
+  <div id="list"></div>
+
+  <div class="add-card">
+    <h2>+ Tilføj ny sang</h2>
+    <div class="row">
+      <input type="text" id="newTitle" placeholder="Sangens titel">
+      <input type="text" id="newArtist" placeholder="Kunstner (valgfrit)">
+    </div>
+    <div class="row">
+      <input type="number" id="newTempo" placeholder="Tempo (BPM)" value="120">
+      <input type="number" id="newBeatsPerBar" placeholder="Slag pr. takt" value="4">
+    </div>
+    <div class="field-label">Dele (akkorder) — højst 5</div>
+    <div id="newParts"></div>
+    <button class="btn btn-secondary" onclick="addPartRow('newParts')">+ Tilføj del</button>
+    <div class="field-label">Rækkefølge (del-navne, kommasepareret)</div>
+    <input type="text" id="newSequence" placeholder="fx Intro, Verse, Chorus, Verse, Chorus, Outro">
+    <div class="field-label">Kilde-link (valgfrit, bruges kun af "Hent fra link")</div>
+    <input type="text" id="newSourceUrl" placeholder="Link til becifring/tekst">
+    <div class="song-actions">
+      <button class="btn btn-secondary" id="suggestBtn" onclick="suggestSong(null)">✨ Hent akkorder med AI</button>
+      <button class="btn btn-secondary" id="suggestUrlBtn" onclick="suggestSongFromUrl(null)">✨ Hent fra link</button>
+      <button class="btn btn-primary" onclick="addSong()">Tilføj</button>
+    </div>
+    <details class="paste-ai">
+      <summary>Indsæt AI-JSON direkte (se SONGBANK_RULES.md)</summary>
+      <textarea id="pasteJson" placeholder='{"title": "...", "parts": [...], "sequence": [...]}'></textarea>
+      <button class="btn btn-secondary" onclick="loadPastedJson()">Indlæs i formularen</button>
+    </details>
+  </div>
+</main>
+
+<div class="footer-bar">
+  <span id="status"></span>
+  <button class="btn btn-secondary" onclick="load()">Genindlæs</button>
+  <button class="btn btn-primary" onclick="syncToGitHub()">Synkroniser igen</button>
+</div>
+
+<script>
+let songs = [];
+let openIndex = null;
+let partRowSeq = 0;
+
+function setStatus(text, cls) {
+  const el = document.getElementById('status');
+  el.textContent = text;
+  el.className = cls || '';
+}
+
+async function load() {
+  setStatus('Henter…');
+  const res = await fetch('/api/songs');
+  const data = await res.json();
+  songs = data.songs;
+  render();
+  setStatus('');
+}
+
+function render() {
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  const filtered = songs
+    .map((s, i) => ({ s, i }))
+    .filter(({ s }) => !q || s.title.toLowerCase().includes(q) || (s.artist || '').toLowerCase().includes(q))
+    .sort((a, b) => a.s.title.localeCompare(b.s.title, 'da'));
+
+  document.getElementById('countSub').textContent =
+    songs.length + ' sange i songbanken' + (q ? ' · ' + filtered.length + ' matcher' : '');
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty">Ingen sange fundet.</div>';
+    return;
+  }
+
+  for (const { s, i } of filtered) {
+    const card = document.createElement('div');
+    card.className = 'song' + (openIndex === i ? ' open' : '');
+
+    const head = document.createElement('div');
+    head.className = 'song-head';
+    head.innerHTML = `
+      <div>
+        <div class="song-title">${escapeHtml(s.title)}${s.artist ? ' — ' + escapeHtml(s.artist) : ''}</div>
+        <div class="song-sub">${s.parts.length} del(e) · ${s.tempoBPM} BPM · ${s.beatsPerBar}/4 · sequence: ${escapeHtml(s.sequence.join(' → '))}</div>
+      </div>
+      <div class="chevron">▶</div>
+    `;
+    head.onclick = () => { openIndex = openIndex === i ? null : i; render(); };
+
+    const body = document.createElement('div');
+    body.className = 'song-body';
+    const partsContainerId = `parts-${i}`;
+    body.innerHTML = `
+      <div class="field-label">Titel</div>
+      <input type="text" id="title-${i}" value="${escapeAttr(s.title)}">
+      <div class="field-label">Kunstner</div>
+      <input type="text" id="artist-${i}" value="${escapeAttr(s.artist || '')}">
+      <div class="row">
+        <div>
+          <div class="field-label">Tempo (BPM)</div>
+          <input type="number" id="tempo-${i}" value="${s.tempoBPM}">
+        </div>
+        <div>
+          <div class="field-label">Slag pr. takt</div>
+          <input type="number" id="beatsPerBar-${i}" value="${s.beatsPerBar}">
+        </div>
+      </div>
+      <div class="field-label">Dele (akkorder)</div>
+      <div id="${partsContainerId}"></div>
+      <button class="btn btn-secondary" onclick="addPartRow('${partsContainerId}')">+ Tilføj del</button>
+      <div class="field-label">Rækkefølge (del-navne, kommasepareret)</div>
+      <input type="text" id="sequence-${i}" value="${escapeAttr(s.sequence.join(', '))}">
+      <div class="song-actions">
+        <button class="btn btn-danger" onclick='deleteSong(${i}, ${JSON.stringify(s.title)})'>Slet sang</button>
+        <button class="btn btn-primary" onclick='saveSong(${i}, ${JSON.stringify(s.title)})'>Gem ændring</button>
+      </div>
+    `;
+
+    card.appendChild(head);
+    card.appendChild(body);
+    list.appendChild(card);
+
+    const container = document.getElementById(partsContainerId);
+    for (const part of s.parts) addPartRow(partsContainerId, part);
+  }
+}
+
+function addPartRow(containerId, part) {
+  const container = document.getElementById(containerId);
+  const rowId = 'part' + (partRowSeq++);
+  const row = document.createElement('div');
+  row.className = 'part-row';
+  row.id = rowId;
+  row.innerHTML = `
+    <div class="row">
+      <input type="text" class="label-input" placeholder="Navn (fx Verse)" value="${escapeAttr(part ? part.label : '')}">
+      <input type="number" class="bars-input" placeholder="Bars" value="${part ? part.barCount : 8}">
+      <button class="btn btn-danger" onclick="document.getElementById('${rowId}').remove()">✕</button>
+    </div>
+    <textarea placeholder="| C | Am | F G |">${escapeHtml(part ? part.chords : '')}</textarea>
+  `;
+  container.appendChild(row);
+}
+
+function readParts(containerId) {
+  const container = document.getElementById(containerId);
+  const parts = [];
+  for (const row of container.children) {
+    const label = row.querySelector('.label-input').value.trim();
+    const barCount = parseInt(row.querySelector('.bars-input').value, 10);
+    const chords = row.querySelector('textarea').value.trim();
+    if (!label && !chords) continue;
+    parts.push({ label, barCount: barCount || 0, chords });
+  }
+  return parts;
+}
+
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+}
+function escapeAttr(s) {
+  return escapeHtml(s).replace(/"/g, '&quot;');
+}
+
+function syncMessage(localMsg, sync) {
+  if (!sync) return localMsg;
+  if (!sync.ok) return localMsg + ' Kunne ikke synkronisere til GitHub: ' + (sync.log || sync.step) + ' — prøv "Synkroniser igen".';
+  return localMsg + (sync.changed ? ' Sendt til GitHub — live om et øjeblik.' : '');
+}
+
+async function mutate(url, method, body, busyMsg) {
+  setStatus(busyMsg);
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      setStatus(data.error || 'Noget gik galt', 'err');
+      return null;
+    }
+    songs = data.songs;
+    return data;
+  } catch (e) {
+    setStatus('Kunne ikke kontakte serveren: ' + e, 'err');
+    return null;
+  }
+}
+
+function parseSequence(text) {
+  return text.split(',').map(s => s.trim()).filter(Boolean);
+}
+
+async function saveSong(i, originalTitle) {
+  const updated = {
+    title: document.getElementById(`title-${i}`).value.trim(),
+    artist: document.getElementById(`artist-${i}`).value.trim(),
+    tempoBPM: parseFloat(document.getElementById(`tempo-${i}`).value) || 120,
+    beatsPerBar: parseInt(document.getElementById(`beatsPerBar-${i}`).value, 10) || 4,
+    parts: readParts(`parts-${i}`),
+    sequence: parseSequence(document.getElementById(`sequence-${i}`).value),
+  };
+  const data = await mutate('/api/songs/' + encodeURIComponent(originalTitle), 'PUT', updated, 'Gemmer…');
+  if (!data) return;
+  setStatus(syncMessage('Gemt.', data.sync), data.sync && !data.sync.ok ? 'err' : 'ok');
+  openIndex = null;
+  render();
+}
+
+async function deleteSong(i, title) {
+  if (!confirm(`Slet "${title}"?`)) return;
+  const data = await mutate('/api/songs/' + encodeURIComponent(title), 'DELETE', null, 'Sletter…');
+  if (!data) return;
+  setStatus(syncMessage('Slettet.', data.sync), data.sync && !data.sync.ok ? 'err' : 'ok');
+  openIndex = null;
+  render();
+}
+
+async function addSong() {
+  const song = {
+    title: document.getElementById('newTitle').value.trim(),
+    artist: document.getElementById('newArtist').value.trim(),
+    tempoBPM: parseFloat(document.getElementById('newTempo').value) || 120,
+    beatsPerBar: parseInt(document.getElementById('newBeatsPerBar').value, 10) || 4,
+    parts: readParts('newParts'),
+    sequence: parseSequence(document.getElementById('newSequence').value),
+  };
+  if (!song.title) { setStatus('Sangen skal have en titel', 'err'); return; }
+  const data = await mutate('/api/songs', 'POST', song, 'Tilføjer…');
+  if (!data) return;
+  document.getElementById('newTitle').value = '';
+  document.getElementById('newArtist').value = '';
+  document.getElementById('newTempo').value = '120';
+  document.getElementById('newBeatsPerBar').value = '4';
+  document.getElementById('newParts').innerHTML = '';
+  document.getElementById('newSequence').value = '';
+  document.getElementById('newSourceUrl').value = '';
+  setStatus(syncMessage('Tilføjet.', data.sync), data.sync && !data.sync.ok ? 'err' : 'ok');
+  render();
+}
+
+function fillFormFromSong(song, i) {
+  const prefix = i === null ? 'new' : null;
+  if (i === null) {
+    document.getElementById('newTitle').value = song.title || '';
+    document.getElementById('newArtist').value = song.artist || '';
+    document.getElementById('newTempo').value = song.tempoBPM || 120;
+    document.getElementById('newBeatsPerBar').value = song.beatsPerBar || 4;
+    document.getElementById('newParts').innerHTML = '';
+    for (const part of song.parts || []) addPartRow('newParts', part);
+    document.getElementById('newSequence').value = (song.sequence || []).join(', ');
+  } else {
+    document.getElementById(`title-${i}`).value = song.title || '';
+    document.getElementById(`artist-${i}`).value = song.artist || '';
+    document.getElementById(`tempo-${i}`).value = song.tempoBPM || 120;
+    document.getElementById(`beatsPerBar-${i}`).value = song.beatsPerBar || 4;
+    document.getElementById(`parts-${i}`).innerHTML = '';
+    for (const part of song.parts || []) addPartRow(`parts-${i}`, part);
+    document.getElementById(`sequence-${i}`).value = (song.sequence || []).join(', ');
+  }
+}
+
+async function suggestSong(i) {
+  const titleField = i === null ? 'newTitle' : `title-${i}`;
+  const artistField = i === null ? 'newArtist' : `artist-${i}`;
+  const btnId = i === null ? 'suggestBtn' : null;
+  const title = document.getElementById(titleField).value.trim();
+  const artist = document.getElementById(artistField).value.trim();
+  if (!title) { setStatus('Skriv en titel først', 'err'); return; }
+  const btn = btnId ? document.getElementById(btnId) : null;
+  if (btn) { btn.disabled = true; btn.textContent = 'Henter…'; }
+  setStatus('Spørger AI om akkorderne til "' + title + '"…');
+  try {
+    const res = await fetch('/api/suggest-song', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, artist })
+    });
+    const data = await res.json();
+    if (!data.ok) { setStatus('Fejl: ' + data.error, 'err'); return; }
+    fillFormFromSong(data.song, i);
+    setStatus('Akkorder hentet — tjek dem før du gemmer.', 'ok');
+  } catch (e) {
+    setStatus('Kunne ikke kontakte AI: ' + e, 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✨ Hent akkorder med AI'; }
+  }
+}
+
+async function suggestSongFromUrl(i) {
+  const urlField = i === null ? 'newSourceUrl' : `sourceUrl-${i}`;
+  const btnId = i === null ? 'suggestUrlBtn' : null;
+  const urlEl = document.getElementById(urlField);
+  const url = urlEl ? urlEl.value.trim() : '';
+  if (!url) { setStatus('Indsæt et link først', 'err'); return; }
+  const btn = btnId ? document.getElementById(btnId) : null;
+  if (btn) { btn.disabled = true; btn.textContent = 'Henter side…'; }
+  setStatus('Henter og læser siden "' + url + '"…');
+  try {
+    const res = await fetch('/api/suggest-song-from-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const data = await res.json();
+    if (!data.ok) { setStatus('Fejl: ' + data.error, 'err'); return; }
+    fillFormFromSong(data.song, i);
+    setStatus('Akkorder hentet fra siden — tjek dem før du gemmer.', 'ok');
+  } catch (e) {
+    setStatus('Kunne ikke kontakte AI: ' + e, 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✨ Hent fra link'; }
+  }
+}
+
+function loadPastedJson() {
+  const raw = document.getElementById('pasteJson').value.trim();
+  if (!raw) return;
+  let stripped = raw;
+  if (stripped.startsWith('```')) {
+    const lines = stripped.split('\n');
+    if (lines[0].startsWith('```')) lines.shift();
+    if (lines.length && lines[lines.length - 1].startsWith('```')) lines.pop();
+    stripped = lines.join('\n');
+  }
+  try {
+    const song = JSON.parse(stripped);
+    fillFormFromSong(song, null);
+    document.getElementById('pasteJson').value = '';
+    setStatus('JSON indlæst i formularen — tjek den før du gemmer.', 'ok');
+  } catch (e) {
+    setStatus('Kunne ikke læse JSON: ' + e, 'err');
+  }
+}
+
+async function syncToGitHub() {
+  setStatus('Synkroniserer…');
+  const res = await fetch('/api/sync', { method: 'POST' });
+  const data = await res.json();
+  if (!data.ok) { setStatus('Fejl: ' + (data.log || data.step), 'err'); return; }
+  setStatus(data.log, 'ok');
+}
+
+document.getElementById('search').addEventListener('input', render);
+load();
+
+setInterval(() => {
+  if (openIndex === null) load();
+}, 8000);
+</script>
+
+</body>
+</html>

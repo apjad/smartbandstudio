@@ -1,0 +1,18 @@
+{
+  "songs": [
+    {
+      "title": "12-Bar Blues (demo)",
+      "artist": "",
+      "tempoBPM": 96,
+      "beatsPerBar": 4,
+      "parts": [
+        {
+          "label": "Verse",
+          "barCount": 12,
+          "chords": "| A7 | A7 | A7 | A7 | D7 | D7 | A7 | A7 | E7 | D7 | A7 | E7 |"
+        }
+      ],
+      "sequence": ["Verse", "Verse", "Verse"]
+    }
+  ]
+}
