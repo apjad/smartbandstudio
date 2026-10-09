@@ -17,22 +17,6 @@
         "Verse",
         "Verse"
       ]
-    },
-    {
-      "title": "__editor-smoke-test__",
-      "artist": "",
-      "tempoBPM": 100.0,
-      "beatsPerBar": 4,
-      "parts": [
-        {
-          "label": "Verse",
-          "barCount": 4,
-          "chords": "| C | G | Am | F |"
-        }
-      ],
-      "sequence": [
-        "Verse"
-      ]
     }
   ]
 }
