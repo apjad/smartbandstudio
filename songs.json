@@ -12,7 +12,27 @@
           "chords": "| A7 | A7 | A7 | A7 | D7 | D7 | A7 | A7 | E7 | D7 | A7 | E7 |"
         }
       ],
-      "sequence": ["Verse", "Verse", "Verse"]
+      "sequence": [
+        "Verse",
+        "Verse",
+        "Verse"
+      ]
+    },
+    {
+      "title": "__editor-smoke-test__",
+      "artist": "",
+      "tempoBPM": 100.0,
+      "beatsPerBar": 4,
+      "parts": [
+        {
+          "label": "Verse",
+          "barCount": 4,
+          "chords": "| C | G | Am | F |"
+        }
+      ],
+      "sequence": [
+        "Verse"
+      ]
     }
   ]
 }
