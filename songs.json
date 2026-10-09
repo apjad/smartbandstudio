@@ -62,6 +62,50 @@
         "Chorus",
         "Outro"
       ]
+    },
+    {
+      "title": "Wonderful Tonight",
+      "artist": "Eric Clapton",
+      "tempoBPM": 92.0,
+      "beatsPerBar": 4,
+      "parts": [
+        {
+          "label": "Intro",
+          "barCount": 4,
+          "chords": "| G | D/F# | C | D |"
+        },
+        {
+          "label": "Verse",
+          "barCount": 16,
+          "chords": "| G | D/F# | C | D | G | D/F# | C | D | C | D | G D/F# | Em | C | D | G | % |"
+        },
+        {
+          "label": "Bridge",
+          "barCount": 8,
+          "chords": "| C | D | G | D/F# Em | C | D | C D | G |"
+        },
+        {
+          "label": "Last Verse",
+          "barCount": 16,
+          "chords": "| G | D/F# | C | D | G | D/F# | C | D | C | D | G D/F# | Em | C | D | G D/F# | Em |"
+        },
+        {
+          "label": "Outro",
+          "barCount": 8,
+          "chords": "| D/F# Em | C | D | G | G | D/F# | C | D |"
+        }
+      ],
+      "sequence": [
+        "Intro",
+        "Intro",
+        "Verse",
+        "Intro",
+        "Verse",
+        "Bridge",
+        "Intro",
+        "Last Verse",
+        "Outro"
+      ]
     }
   ]
 }
