@@ -17,6 +17,51 @@
         "Verse",
         "Verse"
       ]
+    },
+    {
+      "title": "Hotel California",
+      "artist": "Eagles",
+      "tempoBPM": 75.0,
+      "beatsPerBar": 4,
+      "parts": [
+        {
+          "label": "Intro",
+          "barCount": 8,
+          "chords": "| Bm | F#7 | A | E | G | D | Em | F# |"
+        },
+        {
+          "label": "Verse",
+          "barCount": 16,
+          "chords": "| Bm | F#7 | A | E | G | D | Em | F# | Bm | F#7 | A | E | G | D | Em | F# |"
+        },
+        {
+          "label": "Chorus",
+          "barCount": 8,
+          "chords": "| G | D | F | C | E | Am | F# | Bm |"
+        },
+        {
+          "label": "Solo",
+          "barCount": 16,
+          "chords": "| Bm | F#7 | A | E | G | D | Em | F# | Bm | F#7 | A | E | G | D | Em | F# |"
+        },
+        {
+          "label": "Outro",
+          "barCount": 8,
+          "chords": "| Bm | F#7 | A | E | G | D | Em | F# |"
+        }
+      ],
+      "sequence": [
+        "Intro",
+        "Verse",
+        "Chorus",
+        "Verse",
+        "Chorus",
+        "Solo",
+        "Chorus",
+        "Verse",
+        "Chorus",
+        "Outro"
+      ]
     }
   ]
 }
