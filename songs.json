@@ -106,6 +106,38 @@
         "Last Verse",
         "Outro"
       ]
+    },
+    {
+      "title": "Little Wing",
+      "artist": "Jimi Hendrix",
+      "tempoBPM": 72.0,
+      "beatsPerBar": 4,
+      "parts": [
+        {
+          "label": "Intro",
+          "barCount": 4,
+          "chords": "| Em | G | Am | Em |"
+        },
+        {
+          "label": "Verse",
+          "barCount": 8,
+          "chords": "| Em | G | Am | Em | | C | D | F | C |"
+        },
+        {
+          "label": "Turnaround",
+          "barCount": 4,
+          "chords": "| D | F | C | G/B |"
+        }
+      ],
+      "sequence": [
+        "Intro",
+        "Verse",
+        "Turnaround",
+        "Verse",
+        "Turnaround",
+        "Verse",
+        "Turnaround"
+      ]
     }
   ]
 }
