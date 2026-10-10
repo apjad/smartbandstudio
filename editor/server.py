@@ -16,6 +16,7 @@ come from smartbandstudio-editor-credentials.local (sibling of this repo,
 one level up from agentclaude/smartbandstudio-pages).
 """
 import base64
+import html as htmllib
 import json
 import os
 import re
@@ -126,6 +127,67 @@ def load_credentials():
 
 AUTH_USERS = load_credentials()
 INDEX_HTML_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
+
+
+_SHARP_NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
+_LETTER = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11, "H": 11}
+
+
+def _transpose_note(note, steps):
+    pitch = _LETTER[note[0].upper()]
+    if note[1:2] in ("#", "♯"):
+        pitch += 1
+    elif note[1:2] in ("b", "♭"):
+        pitch -= 1
+    return _SHARP_NAMES[(pitch + steps) % 12]
+
+
+def transpose_chord(chord, steps):
+    """`D/F#` + 7 -> `A/C#`. Anything that is not a recognisable chord is left alone."""
+    m = re.fullmatch(rf"({_NOTE})(.*?)(?:/({_NOTE}))?", chord.strip())
+    if not steps or not m:
+        return chord
+    out = _transpose_note(m.group(1), steps) + m.group(2)
+    if m.group(3):
+        out += "/" + _transpose_note(m.group(3), steps)
+    return out
+
+
+def page_text_for_ai(page_html):
+    """The part of a chord-site page an AI needs, as plain text with line breaks kept
+    (chords-over-lyrics alignment matters).
+
+    Ultimate Guitar renders its chart with JavaScript; the chart itself sits in the
+    `js-store` element's `data-content` JSON. Its chords are guitar *shapes* under a
+    capo, so they are transposed up by the capo here — the app's band has to play
+    the pitches that actually sound."""
+    m = re.search(r'class="js-store"\s+data-content="([^"]*)"', page_html)
+    if m:
+        try:
+            data = json.loads(htmllib.unescape(m.group(1)))["store"]["page"]["data"]
+            content = data["tab_view"]["wiki_tab"]["content"]
+            tab = data.get("tab") or {}
+            capo = int((data["tab_view"].get("meta") or {}).get("capo") or 0)
+        except (ValueError, KeyError, TypeError):
+            content = None
+        if content:
+            content = re.sub(r"\[ch\](.*?)\[/ch\]", lambda c: transpose_chord(c.group(1), capo), content)
+            content = re.sub(r"\[/?tab\]", "", content)
+            # Tablature staff lines carry no chords.
+            # Tablature staff lines carry no chords; a leftover "Capo 7" line would
+            # invite the AI to transpose a second time.
+            content = "\n".join(l for l in content.splitlines()
+                                 if not re.match(r"\s*([eBGDAEbgdae]\||capo\b)", l, re.I))
+            header = f'Song: {tab.get("song_name", "")} by {tab.get("artist_name", "")}\n'
+            if capo:
+                header += f"(Chords below are already transposed to sounding pitch, capo {capo} removed.)\n"
+            return (header + content)[:30000]
+    text = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", page_html)
+    text = re.sub(r"(?i)<br\s*/?>|</(p|div|li|pre|h[1-6]|tr)>", "\n", text)
+    text = htmllib.unescape(re.sub(r"<[^>]+>", " ", text))
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n\s*\n+", "\n\n", text).strip()
+    return text[:30000]
 
 
 def clean_part(part, index_label):
@@ -421,13 +483,11 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             return {"ok": False, "error": f"Kunne ikke hente siden: {e}"}
 
-        text = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", html)
-        text = re.sub(r"\s+", " ", text).strip()
-        text = text[:20000]
+        text = page_text_for_ai(html)
 
         prompt = (
-            "Extract the chord chart from this webpage (raw HTML/text below), which likely shows "
-            "chords over lyrics or a tab-style chord sheet. " + self._RULES + "\n\n" + text
+            "Extract the chord chart from this chord-site page (text below), which likely shows "
+            "chords over lyrics. Count bars from the song's structure, not from chord lines. " + self._RULES + "\n\n" + text
         )
         return self._ask_grok(prompt, web_search=False)
 
@@ -436,7 +496,9 @@ class Handler(BaseHTTPRequestHandler):
         """Runs grok and returns (song dict or None, error text or None)."""
         args = [GROK_BIN, "-p", prompt, "--json-schema", Handler._SCHEMA]
         if not web_search:
-            args.append("--disable-web-search")
+            # The chart is already in the prompt; low effort cut a link import
+            # from ~3.5 to ~1.5 minutes with the same result.
+            args += ["--disable-web-search", "--reasoning-effort", "low"]
         try:
             result = subprocess.run(args, capture_output=True, text=True, timeout=GROK_TIMEOUT)
         except subprocess.TimeoutExpired:
