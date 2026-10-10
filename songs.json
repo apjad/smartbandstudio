@@ -114,29 +114,13 @@
       "beatsPerBar": 4,
       "parts": [
         {
-          "label": "Intro",
-          "barCount": 4,
-          "chords": "| Em | G | Am | Em |"
-        },
-        {
           "label": "Verse",
-          "barCount": 8,
-          "chords": "| Em | G | Am | Em | | C | D | F | C |"
-        },
-        {
-          "label": "Turnaround",
-          "barCount": 4,
-          "chords": "| D | F | C | G/B |"
+          "barCount": 12,
+          "chords": "| Em | G | Am | Em | | C | D | F | C | D | D |D | D |"
         }
       ],
       "sequence": [
-        "Intro",
-        "Verse",
-        "Turnaround",
-        "Verse",
-        "Turnaround",
-        "Verse",
-        "Turnaround"
+        "Verse"
       ]
     }
   ]
