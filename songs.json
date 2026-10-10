@@ -122,6 +122,56 @@
       "sequence": [
         "Verse"
       ]
+    },
+    {
+      "title": "Here Comes The Sun",
+      "artist": "The Beatles",
+      "tempoBPM": 129.0,
+      "beatsPerBar": 4,
+      "parts": [
+        {
+          "label": "Intro",
+          "barCount": 4,
+          "chords": "| A | A | D | E7 |"
+        },
+        {
+          "label": "Verse",
+          "barCount": 8,
+          "chords": "| A | A | D | E7 | A | A | D | E7 |"
+        },
+        {
+          "label": "Chorus",
+          "barCount": 6,
+          "chords": "| A | A | D | B7 | A | A |"
+        },
+        {
+          "label": "Bridge",
+          "barCount": 12,
+          "chords": "| C G | D/F# D | C G | D/F# D | C G | D/F# D | C G | D/F# D | C G | D/F# D | A | E7 |"
+        },
+        {
+          "label": "Outro",
+          "barCount": 2,
+          "chords": "| A | A |"
+        }
+      ],
+      "sequence": [
+        "Intro",
+        "Intro",
+        "Verse",
+        "Chorus",
+        "Intro",
+        "Verse",
+        "Chorus",
+        "Intro",
+        "Bridge",
+        "Verse",
+        "Chorus",
+        "Intro",
+        "Chorus",
+        "Intro",
+        "Outro"
+      ]
     }
   ]
 }
