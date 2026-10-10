@@ -24,6 +24,7 @@ import sys
 import threading
 import urllib.parse
 import urllib.request
+import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 REPO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -33,8 +34,75 @@ GROK_BIN = os.path.expanduser("~/.grok/bin/grok")
 PORT = 8421
 MAX_PARTS = 5
 MAX_BARS = 48
+# Same range the app's SongImportPlan accepts (RemoteSongCatalog.swift) —
+# a song outside it is silently skipped by the app's import.
+MIN_TEMPO, MAX_TEMPO = 40, 240
+GROK_TIMEOUT = 300
+
+# Mirrors ChordParser.swift (international notation, as the app's songbank
+# import uses), so a chart the app cannot read is rejected here instead of
+# silently disappearing from the app's import list.
+_NOTE = r"[A-Ha-h](?:#|♯|b|♭)?"
+_QUALITIES = {
+    "", "maj", "major", "M", "m", "min", "mi", "-", "minor", "7", "dom7",
+    "maj7", "M7", "Δ", "Δ7", "ma7", "j7", "m7", "min7", "mi7", "-7",
+    "dim", "°", "o", "aug", "+", "sus2", "sus4", "sus", "add9", "add2",
+}
+_LOWER_QUALITIES = {q.lower() for q in _QUALITIES}
+
+
+def chord_is_valid(token):
+    m = re.fullmatch(rf"({_NOTE})(.*?)(?:/({_NOTE}))?", token)
+    if not m or m.group(1)[0].upper() not in "ABCDEFGH":
+        return False
+    quality = m.group(2).strip()
+    return quality in _QUALITIES or quality.lower() in _LOWER_QUALITIES
+
+
+def parse_bar_count(chords):
+    """Number of bars the app will read from `chords`, or raises ValueError
+    naming the first chord it would reject (same rules as ChordParser.parseBars)."""
+    lines = []
+    for line in chords.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        if "|" not in line:
+            tokens = [t for t in re.split(r"[ ,\t]+", line) if t]
+            if len(tokens) > 1:
+                line = "".join(f"| {t} " for t in tokens) + "|"
+        lines.append(line)
+    bars = 0
+    for raw in "|".join(lines).split("|"):
+        raw = raw.strip()
+        if not raw:
+            continue
+        if raw != "%":
+            for token in (t for t in re.split(r"[ ,\t]+", raw) if t):
+                if token not in (".", "-", "/") and not chord_is_valid(token):
+                    raise ValueError(f'appen kan ikke læse akkorden "{token}"')
+        bars += 1
+    if bars == 0:
+        raise ValueError("ingen takter fundet")
+    return bars
 
 FILE_LOCK = threading.Lock()
+JOBS = {}
+JOBS_LOCK = threading.Lock()
+
+
+def start_job(work):
+    job_id = uuid.uuid4().hex
+    with JOBS_LOCK:
+        JOBS[job_id] = {"done": False}
+
+    def run():
+        try:
+            result = work()
+        except Exception as e:  # never leave the browser polling forever
+            result = {"ok": False, "error": f"Uventet fejl: {e}"}
+        with JOBS_LOCK:
+            JOBS[job_id] = {"done": True, "result": result}
+
+    threading.Thread(target=run, daemon=True).start()
+    return job_id
 
 
 def load_credentials():
@@ -75,6 +143,13 @@ def clean_part(part, index_label):
     chords = str(part.get("chords", "")).strip()
     if not chords:
         raise ValueError(f"{index_label}: \"{label}\" mangler akkorder")
+    try:
+        bars = parse_bar_count(chords)
+    except ValueError as e:
+        raise ValueError(f"{index_label}: \"{label}\" — {e}")
+    if bars > bar_count:
+        raise ValueError(
+            f"{index_label}: \"{label}\" har {bars} takter akkorder men kun {bar_count} bars — ret antallet")
     return {"label": label, "barCount": bar_count, "chords": chords}
 
 
@@ -89,8 +164,8 @@ def clean_song(song, index_label):
         tempo = float(song.get("tempoBPM", 120))
     except (TypeError, ValueError):
         raise ValueError(f"\"{title}\" har et ugyldigt tempo")
-    if not (20 <= tempo <= 300):
-        raise ValueError(f"\"{title}\" skal have et tempo mellem 20 og 300 BPM")
+    if not (MIN_TEMPO <= tempo <= MAX_TEMPO):
+        raise ValueError(f"\"{title}\" skal have et tempo mellem {MIN_TEMPO} og {MAX_TEMPO} BPM")
     try:
         beats_per_bar = int(song.get("beatsPerBar", 4))
     except (TypeError, ValueError):
@@ -180,6 +255,14 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
+        elif self.path.startswith("/api/jobs/"):
+            with JOBS_LOCK:
+                job = JOBS.get(self.path[len("/api/jobs/"):])
+                if job and job["done"]:
+                    JOBS.pop(self.path[len("/api/jobs/"):], None)
+            if job is None:
+                return self._send_json(404, {"error": "Ukendt job — prøv igen"})
+            self._send_json(200, job)
         elif self.path == "/api/songs":
             with FILE_LOCK:
                 songs = load_songs_unlocked()
@@ -204,7 +287,7 @@ class Handler(BaseHTTPRequestHandler):
             artist = str(body.get("artist", "")).strip()
             if not title:
                 return self._send_json(400, {"error": "Mangler titel på sangen"})
-            return self._send_json(200, self._suggest_song(title, artist))
+            return self._send_json(200, {"job": start_job(lambda: self._suggest_song(title, artist))})
         if self.path == "/api/suggest-song-from-url":
             try:
                 url = self._read_json_body().get("url", "").strip()
@@ -212,7 +295,7 @@ class Handler(BaseHTTPRequestHandler):
                 url = ""
             if not url:
                 return self._send_json(400, {"error": "Mangler link"})
-            return self._send_json(200, self._suggest_song_from_url(url))
+            return self._send_json(200, {"job": start_job(lambda: self._suggest_song_from_url(url))})
         self.send_response(404)
         self.end_headers()
 
@@ -322,26 +405,9 @@ class Handler(BaseHTTPRequestHandler):
         prompt = (
             f'Look up the real chord chart for the song "{title}"{who}. ' + self._RULES
         )
-        try:
-            # No --disable-web-search here: getting a real song's actual chords right benefits
-            # from an actual lookup, unlike Madbank's generic-ingredient guesses.
-            result = subprocess.run(
-                [GROK_BIN, "-p", prompt, "--json-schema", self._SCHEMA],
-                capture_output=True, text=True, timeout=120,
-            )
-        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
-            return {"ok": False, "error": str(e)}
-        if result.returncode != 0:
-            return {"ok": False, "error": result.stderr.strip() or "grok fejlede"}
-        try:
-            song = json.loads(result.stdout)["structuredOutput"]
-        except (json.JSONDecodeError, KeyError, TypeError):
-            return {"ok": False, "error": "Kunne ikke aflæse svar fra AI"}
-        try:
-            cleaned = clean_song(song, "Sangen")
-        except ValueError as e:
-            return {"ok": False, "error": f"AI-svaret var ugyldigt: {e}"}
-        return {"ok": True, "song": cleaned}
+        # Web search stays on: getting a real song's actual chords right benefits
+        # from an actual lookup, unlike Madbank's generic-ingredient guesses.
+        return self._ask_grok(prompt, web_search=True)
 
     def _suggest_song_from_url(self, url):
         if not url.startswith(("http://", "https://")):
@@ -363,24 +429,79 @@ class Handler(BaseHTTPRequestHandler):
             "Extract the chord chart from this webpage (raw HTML/text below), which likely shows "
             "chords over lyrics or a tab-style chord sheet. " + self._RULES + "\n\n" + text
         )
+        return self._ask_grok(prompt, web_search=False)
+
+    @staticmethod
+    def _grok_song(prompt, web_search):
+        """Runs grok and returns (song dict or None, error text or None)."""
+        args = [GROK_BIN, "-p", prompt, "--json-schema", Handler._SCHEMA]
+        if not web_search:
+            args.append("--disable-web-search")
         try:
-            result = subprocess.run(
-                [GROK_BIN, "-p", prompt, "--json-schema", self._SCHEMA, "--disable-web-search"],
-                capture_output=True, text=True, timeout=120,
-            )
-        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
-            return {"ok": False, "error": str(e)}
+            result = subprocess.run(args, capture_output=True, text=True, timeout=GROK_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            return None, f"AI svarede ikke inden for {GROK_TIMEOUT} sekunder"
+        except FileNotFoundError as e:
+            return None, str(e)
         if result.returncode != 0:
-            return {"ok": False, "error": result.stderr.strip() or "grok fejlede"}
+            return None, result.stderr.strip() or "grok fejlede"
         try:
-            song = json.loads(result.stdout)["structuredOutput"]
-        except (json.JSONDecodeError, KeyError, TypeError):
-            return {"ok": False, "error": "Kunne ikke aflæse svar fra AI"}
+            reply = json.loads(result.stdout)
+        except json.JSONDecodeError:
+            return None, "Kunne ikke aflæse svar fra AI"
+        if isinstance(reply.get("structuredOutput"), dict):
+            return reply["structuredOutput"], None
+        # With web search on, grok often writes several JSON objects back to back
+        # (a first draft, then a corrected one) and its own structured-output
+        # check rejects the whole reply. Use the last complete song object.
+        text, decoder, found, i = reply.get("text") or "", json.JSONDecoder(), None, 0
+        while i < len(text):
+            j = text.find("{", i)
+            if j < 0:
+                break
+            try:
+                obj, end = decoder.raw_decode(text, j)
+            except json.JSONDecodeError:
+                i = j + 1
+                continue
+            if isinstance(obj, dict) and isinstance(obj.get("parts"), list):
+                found = obj
+            i = end
+        if found is None:
+            return None, "Kunne ikke aflæse svar fra AI"
+        return found, None
+
+    @staticmethod
+    def _fix_bar_counts(song):
+        """AI answers often miscount bars; the chord text is what the app plays."""
+        for part in song.get("parts") or []:
+            if isinstance(part, dict):
+                try:
+                    part["barCount"] = parse_bar_count(str(part.get("chords", "")))
+                except ValueError:
+                    pass
+        return song
+
+    def _ask_grok(self, prompt, web_search):
+        song, error = self._grok_song(prompt, web_search)
+        if song is None:
+            return {"ok": False, "error": error}
         try:
-            cleaned = clean_song(song, "Sangen")
+            return {"ok": True, "song": clean_song(self._fix_bar_counts(song), "Sangen")}
+        except ValueError as e:
+            first_error = str(e)
+        # One repair round, without web search (the content is already here).
+        repair = (
+            "This chord chart JSON breaks a rule: " + first_error + ". Fix it and return the "
+            "corrected chart. " + self._RULES + "\n\n" + json.dumps(song, ensure_ascii=False)
+        )
+        fixed, error = self._grok_song(repair, web_search=False)
+        if fixed is None:
+            return {"ok": False, "error": f"AI-svaret var ugyldigt: {first_error}"}
+        try:
+            return {"ok": True, "song": clean_song(self._fix_bar_counts(fixed), "Sangen")}
         except ValueError as e:
             return {"ok": False, "error": f"AI-svaret var ugyldigt: {e}"}
-        return {"ok": True, "song": cleaned}
 
     def _run_sync(self):
         def run(*args):
@@ -389,18 +510,23 @@ class Handler(BaseHTTPRequestHandler):
             )
 
         with FILE_LOCK:
-            pull = run("git", "pull", "origin", "main", "--quiet", "--no-edit")
+            # Commit first: pulling with an uncommitted songs.json fails as soon
+            # as GitHub has a newer songs.json than this clone.
+            status = run("git", "status", "--porcelain", "songs.json")
+            if status.stdout.strip():
+                run("git", "add", "songs.json")
+                commit = run("git", "commit", "-q", "-m", "Opdater songs.json via web-editor")
+                if commit.returncode != 0:
+                    return {"ok": False, "step": "commit", "log": commit.stderr}
+
+            pull = run("git", "pull", "--rebase", "--autostash", "origin", "main", "--quiet")
             if pull.returncode != 0:
+                run("git", "rebase", "--abort")
                 return {"ok": False, "step": "pull", "log": pull.stderr}
 
-            status = run("git", "status", "--porcelain", "songs.json")
-            if not status.stdout.strip():
+            ahead = run("git", "rev-list", "--count", "origin/main..HEAD")
+            if ahead.stdout.strip() == "0":
                 return {"ok": True, "changed": False, "log": "Ingen ændringer at synkronisere."}
-
-            run("git", "add", "songs.json")
-            commit = run("git", "commit", "-q", "-m", "Opdater songs.json via web-editor")
-            if commit.returncode != 0:
-                return {"ok": False, "step": "commit", "log": commit.stderr}
 
             push = run("git", "push", "origin", "main", "--quiet")
             if push.returncode != 0:

@@ -367,6 +367,28 @@ function fillFormFromSong(song, i) {
   }
 }
 
+// AI lookups with web search take 1-3 minutes, longer than a browser keeps
+// one request open, so the server runs them as a job and we poll it.
+async function runAiJob(path, body) {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const started = await res.json();
+  if (!started.job) return { ok: false, error: started.error || 'AI-opslaget kunne ikke starte' };
+  const t0 = Date.now();
+  for (;;) {
+    await new Promise(r => setTimeout(r, 2000));
+    const secs = Math.round((Date.now() - t0) / 1000);
+    setStatus('AI arbejder… ' + secs + ' s (det tager typisk 1-2 minutter)');
+    const poll = await fetch('/api/jobs/' + started.job);
+    const job = await poll.json();
+    if (poll.status !== 200) return { ok: false, error: job.error || 'Jobbet forsvandt' };
+    if (job.done) return job.result;
+  }
+}
+
 async function suggestSong(i) {
   const titleField = i === null ? 'newTitle' : `title-${i}`;
   const artistField = i === null ? 'newArtist' : `artist-${i}`;
@@ -378,12 +400,7 @@ async function suggestSong(i) {
   if (btn) { btn.disabled = true; btn.textContent = 'Henter…'; }
   setStatus('Spørger AI om akkorderne til "' + title + '"…');
   try {
-    const res = await fetch('/api/suggest-song', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, artist })
-    });
-    const data = await res.json();
+    const data = await runAiJob('/api/suggest-song', { title, artist });
     if (!data.ok) { setStatus('Fejl: ' + data.error, 'err'); return; }
     fillFormFromSong(data.song, i);
     setStatus('Akkorder hentet — tjek dem før du gemmer.', 'ok');
@@ -404,12 +421,7 @@ async function suggestSongFromUrl(i) {
   if (btn) { btn.disabled = true; btn.textContent = 'Henter side…'; }
   setStatus('Henter og læser siden "' + url + '"…');
   try {
-    const res = await fetch('/api/suggest-song-from-url', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url })
-    });
-    const data = await res.json();
+    const data = await runAiJob('/api/suggest-song-from-url', { url });
     if (!data.ok) { setStatus('Fejl: ' + data.error, 'err'); return; }
     fillFormFromSong(data.song, i);
     setStatus('Akkorder hentet fra siden — tjek dem før du gemmer.', 'ok');
