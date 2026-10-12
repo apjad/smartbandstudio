@@ -172,6 +172,139 @@
         "Intro",
         "Outro"
       ]
+    },
+    {
+      "title": "Four-Chord Pop Ballad",
+      "artist": "",
+      "tempoBPM": 76,
+      "beatsPerBar": 4,
+      "parts": [
+        {
+          "label": "Verse",
+          "barCount": 4,
+          "chords": "| C | G | Am | F |"
+        },
+        {
+          "label": "Chorus",
+          "barCount": 4,
+          "chords": "| F | C | G | Am |"
+        },
+        {
+          "label": "Bridge",
+          "barCount": 4,
+          "chords": "| Dm | Em | F | G |"
+        }
+      ],
+      "sequence": [
+        "Verse",
+        "Chorus",
+        "Verse",
+        "Chorus",
+        "Bridge",
+        "Chorus"
+      ]
+    },
+    {
+      "title": "Minor Blues in A",
+      "artist": "",
+      "tempoBPM": 84,
+      "beatsPerBar": 4,
+      "parts": [
+        {
+          "label": "Verse",
+          "barCount": 12,
+          "chords": "| Am7 | Dm7 | Am7 | Am7 | Dm7 | Dm7 | Am7 | Am7 | F7 | E7 | Am7 | E7 |"
+        }
+      ],
+      "sequence": [
+        "Verse",
+        "Verse"
+      ]
+    },
+    {
+      "title": "Jazz ii–V–I Turnaround",
+      "artist": "",
+      "tempoBPM": 120,
+      "beatsPerBar": 4,
+      "parts": [
+        {
+          "label": "A",
+          "barCount": 4,
+          "chords": "| Dm7 | G7 | Cmaj7 | A7 |"
+        },
+        {
+          "label": "B",
+          "barCount": 4,
+          "chords": "| Em7 | A7 | Dm7 G7 | Cmaj7 |"
+        }
+      ],
+      "sequence": [
+        "A",
+        "A",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "title": "Classic Rock Riff in E",
+      "artist": "",
+      "tempoBPM": 128,
+      "beatsPerBar": 4,
+      "parts": [
+        {
+          "label": "Intro",
+          "barCount": 2,
+          "chords": "| E | E |"
+        },
+        {
+          "label": "Verse",
+          "barCount": 4,
+          "chords": "| E | G A | E | D A |"
+        },
+        {
+          "label": "Chorus",
+          "barCount": 4,
+          "chords": "| A | B | E | E |"
+        },
+        {
+          "label": "Solo",
+          "barCount": 4,
+          "chords": "| E | A | B | E |"
+        }
+      ],
+      "sequence": [
+        "Intro",
+        "Verse",
+        "Chorus",
+        "Verse",
+        "Chorus",
+        "Solo",
+        "Chorus"
+      ]
+    },
+    {
+      "title": "Country Two-Step in G",
+      "artist": "",
+      "tempoBPM": 110,
+      "beatsPerBar": 4,
+      "parts": [
+        {
+          "label": "Verse",
+          "barCount": 8,
+          "chords": "| G | G | C | G | D | D | G | G |"
+        },
+        {
+          "label": "Chorus",
+          "barCount": 4,
+          "chords": "| C | G | D | G |"
+        }
+      ],
+      "sequence": [
+        "Verse",
+        "Chorus",
+        "Verse",
+        "Chorus"
+      ]
     }
   ]
 }
