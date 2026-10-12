@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SmartBand Studio — Support &amp; Privacy</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --panel: #f5f4f1;
+    --text: #241f1a;
+    --muted: #6f675e;
+    --rule: #e2ded7;
+    --accent: #a8761a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16130f;
+      --panel: #1f1b16;
+      --text: #ece7e0;
+      --muted: #a49a8e;
+      --rule: #322c25;
+      --accent: #f2b43c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 22px 80px;
+    line-height: 1.65;
+  }
+  header { border-bottom: 1px solid var(--rule); padding-bottom: 24px; margin-bottom: 8px; }
+  h1 { font-size: 1.75rem; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .tagline { color: var(--muted); margin: 0; }
+  h2 {
+    font-size: 1.25rem;
+    margin-top: 2.4em;
+    padding-top: 1.2em;
+    border-top: 1px solid var(--rule);
+  }
+  h3 { font-size: 1rem; margin-top: 1.8em; margin-bottom: 0.4em; }
+  .updated { color: var(--muted); font-size: 0.9rem; }
+  .lang {
+    display: inline-block;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: -0.6em;
+  }
+  ul { padding-left: 1.2em; }
+  li { margin: 0.35em 0; }
+  .callout {
+    background: var(--panel);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 1.4em 0;
+  }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  a { color: var(--accent); }
+  footer {
+    margin-top: 3.5em;
+    padding-top: 1.5em;
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>SmartBand Studio</h1>
+  <p class="tagline">A backing band and looper that follows the chords you play.</p>
+</header>
+<p class="updated">Last updated: 12 October 2026</p>
+
+<h2>Support</h2>
+<p>SmartBand Studio listens to your guitar, learns the chords of a song part, and plays them back
+with bass and drums in the style and tempo you choose. A built-in looper records your own playing
+on top, and up to five song parts can be chained into a full song.</p>
+
+<h3>Getting help</h3>
+<p>For questions, bug reports or feature requests, use the developer contact link on the app&rsquo;s
+App&nbsp;Store page. When reporting a problem, please include:</p>
+<ul>
+  <li>which device and iOS version you are on</li>
+  <li>whether you used the built-in microphone or a USB audio interface (and which one)</li>
+  <li>whether you used a MIDI pedal</li>
+  <li>what happened versus what you expected</li>
+</ul>
+
+<h3>Getting the best results</h3>
+<ul>
+  <li>Use headphones or an audio interface, so the band doesn&rsquo;t leak back into the microphone while the app learns chords.</li>
+  <li>Strum clearly and hold each chord for its full bar while teaching a part.</li>
+  <li>On the phone speaker, turn on <em>Clearer bass on phone speaker</em> in Settings.</li>
+</ul>
+
+<h2>Privacy</h2>
+<div class="callout">
+  <p><strong>SmartBand Studio does not collect or share any personal data.</strong></p>
+</div>
+<ul>
+  <li><strong>Microphone:</strong> audio is analysed live on your device to recognise chords and tempo.
+  Loops you record in the looper are stored only on your device, together with your songs and settings.</li>
+  <li><strong>Exports:</strong> a WAV or MIDI file is only created when you tap Export, and only goes where you choose to send it.</li>
+  <li><strong>Songbank:</strong> the song list is downloaded from GitHub when you open the import screen.
+  No information about you is sent along; as with any web request, GitHub can see your IP address.</li>
+  <li>No accounts, no analytics, no advertising and no tracking.</li>
+</ul>
+
+<h2>Credits</h2>
+<p>Studio drum kit &ldquo;Naked Drums&rdquo; by Wilkinson Audio, SFZ mapping by kinwie / sfzinstruments,
+licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
+Bass samples from Karoryfer Samples (CC0).</p>
+
+<footer>SmartBand Studio &middot; &copy; 2026</footer>
+</body>
+</html>
